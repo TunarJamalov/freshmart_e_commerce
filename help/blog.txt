@@ -1,0 +1,208 @@
+============================================================================
+✅ web.php
+============================================================================
+Route::get('/comments', [AdminPostController::class, 'comment'])->name('admin_comment');
+Route::get('/comments/delete/{id}', [AdminPostController::class, 'comment_delete'])->name('admin_comment_delete');
+Route::get('/comments/status-change/{id}', [AdminPostController::class, 'comment_status_change'])->name('admin_comment_status_change');
+Route::get('/replies', [AdminPostController::class, 'reply'])->name('admin_reply');
+Route::get('/replies/delete/{id}', [AdminPostController::class, 'reply_delete'])->name('admin_reply_delete');
+Route::get('/replies/status-change/{id}', [AdminPostController::class, 'reply_status_change'])->name('admin_reply_status_change');
+Route::post('/reply-submit', [AdminPostController::class, 'reply_submit'])->name('admin_reply_submit');
+
+Route::get('/blog', [FrontController::class, 'blog'])->name('blog');
+Route::get('/post/{slug}', [FrontController::class, 'post'])->name('post');
+Route::post('/comment-submit', [FrontController::class, 'comment_submit'])->name('comment_submit');
+Route::post('/reply-submit', [FrontController::class, 'reply_submit'])->name('reply_submit');
+
+
+============================================================================
+✅ Table Structure
+============================================================================
+👉 posts 
+id, photo, title, slug, short_des, des
+
+👉 comments
+id, post_id, name, email, comment, status
+
+👉 replies
+id, comment_id, name, email, reply, user_type, status
+
+
+============================================================================
+✅ AdminPostController.php
+============================================================================
+public function comment_status_change($id)
+{
+    if($comment->status == 'Pending') {
+        $comment->status = 'Active';
+    } else {
+        $comment->status = 'Pending';
+    }
+}
+
+public function reply_status_change($id)
+{
+    if($reply->status == 'Pending') {
+        $reply->status = 'Active';
+    } else {
+        $reply->status = 'Pending';
+    }
+}
+
+
+
+============================================================================
+✅ resources/views/admin/post/comment.blade.php
+============================================================================
+@foreach ($comments as $item)
+<td>
+    {{ $item->comment }}<br>
+    <a href="" data-bs-toggle="modal" data-bs-target="#modal_reply_admin{{$loop->iteration}}">Reply</a>
+</td>
+<td>
+    @if ($item->status == "Active")
+        <a href="{{ route('admin_comment_status_change',$item->id) }}" onClick="return confirm('Are you sure want to change status?');"><span class="badge badge-success">Active</span></a>
+    @else
+        <a href="{{ route('admin_comment_status_change',$item->id) }}" onClick="return confirm('Are you sure want to change status?');"><span class="badge badge-danger">Pending</span></a>
+    @endif
+</td>
+<div class="modal fade" id="modal_reply_admin{{$loop->iteration}}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Reply</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ route('admin_reply_submit') }}" method="post">
+                    @csrf
+                    <input type="hidden" name="comment_id" value="{{ $item->id }}">
+                    <div class="mb-3">
+                        <textarea name="reply" class="form-control h_100" cols="30" rows="10" placeholder="Reply"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endforeach
+
+
+============================================================================
+✅ resources/views/admin/post/reply.blade.php
+============================================================================
+@foreach ($replies as $item)
+<td>
+    @if ($item->status == "Active")
+        <a href="{{ route('admin_reply_status_change',$item->id) }}" onClick="return confirm('Are you sure want to change the status?');"><span class="badge badge-success">Active</span></a>
+    @else
+        <a href="{{ route('admin_reply_status_change',$item->id) }}" onClick="return confirm('Are you sure want to change the status?');"><span class="badge badge-danger">Pending</span></a>
+    @endif
+</td>
+@endforeach
+
+
+
+============================================================================
+✅ FrontController.php
+============================================================================
+public function comment_submit(Request $request)
+{
+    // Send Email to Admin
+    $subject = 'New Comment Submitted';
+    $message = 'A new comment has been submitted on your blog post. Please login to your admin panel to approve it.<br>';
+    $message .= '<a href="'.route('admin_comment').'">Click Here</a>';
+    $admin_email = Admin::where('id',1)->first()->email;
+    \Mail::to($admin_email)->send(new Websitemail($subject,$message));
+}
+
+public function reply_submit(Request $request)
+{
+    $comment->user_type = 'Visitor';
+
+    // Send Email to Admin
+    $subject = 'New Reply Submitted';
+    $message = 'A new reply has been submitted on your blog post. Please login to your admin panel to approve it.<br>';
+    $message .= '<a href="'.route('admin_reply').'">Click Here</a>';
+    $admin_email = Admin::where('id',1)->first()->email;
+    \Mail::to($admin_email)->send(new Websitemail($subject,$message));
+}
+
+============================================================================
+✅ resources/views/front/post.blade.php
+============================================================================
+// SHARE
+<a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(route('post', $post->slug)) }}">
+<a href="https://twitter.com/intent/tweet?url={{ urlencode(route('post', $post->slug)) }}&text={{ urlencode($post->title) }}">
+<a href="https://www.linkedin.com/sharing/share-offsite/?url={{ urlencode(route('post', $post->slug)) }}">
+
+@foreach($comments as $item)
+    @php
+        $default = "";
+        $size = 200;
+        $gravatar_url = "http://www.gravatar.com/avatar/" . md5(strtolower(trim($item->email))) . "?d=" . urlencode($default) . "&s=" . $size;
+    @endphp
+    <img src="{{ $gravatar_url }}" alt="">
+    <a href="" data-bs-toggle="modal" data-bs-target="#reply_modal{{$loop->iteration}}"><i class="fas fa-reply"></i> Reply</a>
+    <div class="modal fade" id="reply_modal{{$loop->iteration}}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="exampleModalLabel">Give a Reply</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ route('reply_submit') }}" method="post">
+                        @csrf
+                        <input type="hidden" name="comment_id" value="{{ $item->id }}">
+                        <div class="mb-3">
+                            <input name="name" type="text" class="form-control" placeholder="Name" required>
+                        </div>
+                        <div class="mb-3">
+                            <input name="email" type="text" class="form-control" placeholder="Email" required>
+                        </div>
+                        <div class="mb-3">
+                            <textarea name="reply" class="form-control h_100" cols="30" rows="10" placeholder="Reply" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @php
+        $replies = App\Models\Reply::where('comment_id',$item->id)->where('status', 'Active')->get();
+    @endphp
+
+    @foreach($replies as $reply)
+        @php
+            if($reply->user_type == 'Admin')
+            {
+                $name = Auth::guard('admin')->user()->name;
+                $email = Auth::guard('admin')->user()->email;
+            } else {
+                $name = $reply->name;
+                $email = $reply->email;
+            }
+        @endphp
+
+        @php
+            $default = "";
+            $size = 200;
+            $gravatar_url = "http://www.gravatar.com/avatar/" . md5(strtolower(trim($email))) . "?d=" . urlencode($default) . "&s=" . $size;
+        @endphp
+        <img src="{{ $gravatar_url }}" alt="">
+
+        @if($reply->user_type == 'Admin')
+            <span class="badge bg-primary">{{ __('Admin') }}</span>
+        @endif
+
+    @endforeach
+
+@endforeach
+
+
