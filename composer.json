@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "tunarcamalov/freshmart-e-commerce",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "A Laravel e-commerce portfolio project with products, cart, checkout, orders, coupons, admin panel, and payment integrations.",
+    "keywords": ["php", "laravel", "ecommerce", "portfolio", "mysql"],
     "license": "MIT",
     "require": {
         "php": "^8.2",
